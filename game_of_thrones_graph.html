@@ -1,0 +1,358 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 800px;
+                 background-color: #222222;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#26d9ff", "font": {"color": "white"}, "id": "Maester Aemon", "label": "Maester Aemon", "shape": "dot", "size": 7, "title": "Maester Aemon\n Top neighbors:\n-Jon Snow\n-Samwell Tarly\n-Grenn"}, {"color": "#00ffff", "font": {"color": "white"}, "id": "Gared", "label": "Gared", "shape": "dot", "size": 1, "title": "Gared\n Top neighbors:\n-Maester Aemon"}, {"color": "#cc33ff", "font": {"color": "white"}, "id": "Jon Snow", "label": "Jon Snow", "shape": "dot", "size": 33, "title": "Jon Snow\n Top neighbors:\n-Bran Stark\n-Robb Stark\n-Grenn"}, {"color": "#c639ff", "font": {"color": "white"}, "id": "Tyrion Lannister", "label": "Tyrion Lannister", "shape": "dot", "size": 32, "title": "Tyrion Lannister\n Top neighbors:\n-Cersei Lannister\n-Bronn\n-Joffrey Baratheon"}, {"color": "#40bfff", "font": {"color": "white"}, "id": "Samwell Tarly", "label": "Samwell Tarly", "shape": "dot", "size": 11, "title": "Samwell Tarly\n Top neighbors:\n-Jon Snow\n-Lord Renly Baratheon\n-Maester Aemon"}, {"color": "#0cf3ff", "font": {"color": "white"}, "id": "Grenn", "label": "Grenn", "shape": "dot", "size": 3, "title": "Grenn\n Top neighbors:\n-Jon Snow\n-Samwell Tarly\n-Maester Aemon"}, {"color": "#ff00ff", "font": {"color": "white"}, "id": "Robert Baratheon", "label": "Robert Baratheon", "shape": "dot", "size": 41, "title": "Robert Baratheon\n Top neighbors:\n-Eddard Stark\n-Lord Renly Baratheon\n-Cersei Lannister"}, {"color": "#609fff", "font": {"color": "white"}, "id": "Janos Slynt", "label": "Janos Slynt", "shape": "dot", "size": 16, "title": "Janos Slynt\n Top neighbors:\n-Tyrion Lannister\n-Jon Snow\n-Joffrey Baratheon"}, {"color": "#c03fff", "font": {"color": "white"}, "id": "Robb Stark", "label": "Robb Stark", "shape": "dot", "size": 31, "title": "Robb Stark\n Top neighbors:\n-Bran Stark\n-Catelyn Stark\n-Jon Snow"}, {"color": "#b34cff", "font": {"color": "white"}, "id": "Bran Stark", "label": "Bran Stark", "shape": "dot", "size": 29, "title": "Bran Stark\n Top neighbors:\n-Hodor\n-Robb Stark\n-Maester Luwin"}, {"color": "#4cb3ff", "font": {"color": "white"}, "id": "Old Nan", "label": "Old Nan", "shape": "dot", "size": 13, "title": "Old Nan\n Top neighbors:\n-Bran Stark\n-Hodor\n-Maester Luwin"}, {"color": "#e01fff", "font": {"color": "white"}, "id": "Eddard Stark", "label": "Eddard Stark", "shape": "dot", "size": 36, "title": "Eddard Stark\n Top neighbors:\n-Robert Baratheon\n-Catelyn Stark\n-Arya Stark"}, {"color": "#807fff", "font": {"color": "white"}, "id": "Theon Greyjoy", "label": "Theon Greyjoy", "shape": "dot", "size": 21, "title": "Theon Greyjoy\n Top neighbors:\n-Robb Stark\n-Bran Stark\n-Eddard Stark"}, {"color": "#53acff", "font": {"color": "white"}, "id": "Jory Cassel", "label": "Jory Cassel", "shape": "dot", "size": 14, "title": "Jory Cassel\n Top neighbors:\n-Eddard Stark\n-Arya Stark\n-Bran Stark"}, {"color": "#a05fff", "font": {"color": "white"}, "id": "Ser Rodrik Cassel", "label": "Ser Rodrik Cassel", "shape": "dot", "size": 26, "title": "Ser Rodrik Cassel\n Top neighbors:\n-Bran Stark\n-Catelyn Stark\n-Theon Greyjoy"}, {"color": "#20dfff", "font": {"color": "white"}, "id": "Hullen", "label": "Hullen", "shape": "dot", "size": 6, "title": "Hullen\n Top neighbors:\n-Robb Stark\n-Bran Stark\n-Arya Stark"}, {"color": "#6c93ff", "font": {"color": "white"}, "id": "Rickon Stark", "label": "Rickon Stark", "shape": "dot", "size": 18, "title": "Rickon Stark\n Top neighbors:\n-Bran Stark\n-Robb Stark\n-Jon Snow"}, {"color": "#c03fff", "font": {"color": "white"}, "id": "Arya Stark", "label": "Arya Stark", "shape": "dot", "size": 31, "title": "Arya Stark\n Top neighbors:\n-Sansa Stark\n-Eddard Stark\n-Jon Snow"}, {"color": "#cc33ff", "font": {"color": "white"}, "id": "Sansa Stark", "label": "Sansa Stark", "shape": "dot", "size": 33, "title": "Sansa Stark\n Top neighbors:\n-Joffrey Baratheon\n-Arya Stark\n-Tyrion Lannister"}, {"color": "#b34cff", "font": {"color": "white"}, "id": "Joffrey Baratheon", "label": "Joffrey Baratheon", "shape": "dot", "size": 29, "title": "Joffrey Baratheon\n Top neighbors:\n-Sansa Stark\n-Tyrion Lannister\n-Cersei Lannister"}, {"color": "#cc33ff", "font": {"color": "white"}, "id": "Catelyn Stark", "label": "Catelyn Stark", "shape": "dot", "size": 33, "title": "Catelyn Stark\n Top neighbors:\n-Robb Stark\n-Eddard Stark\n-Lord Renly Baratheon"}, {"color": "#936cff", "font": {"color": "white"}, "id": "Jaime Lannister", "label": "Jaime Lannister", "shape": "dot", "size": 24, "title": "Jaime Lannister\n Top neighbors:\n-Tyrion Lannister\n-Cersei Lannister\n-Eddard Stark"}, {"color": "#609fff", "font": {"color": "white"}, "id": "Maester Luwin", "label": "Maester Luwin", "shape": "dot", "size": 16, "title": "Maester Luwin\n Top neighbors:\n-Bran Stark\n-Robb Stark\n-Hodor"}, {"color": "#59a6ff", "font": {"color": "white"}, "id": "Hodor", "label": "Hodor", "shape": "dot", "size": 15, "title": "Hodor\n Top neighbors:\n-Bran Stark\n-Maester Luwin\n-Osha"}, {"color": "#39c6ff", "font": {"color": "white"}, "id": "Yoren", "label": "Yoren", "shape": "dot", "size": 10, "title": "Yoren\n Top neighbors:\n-Arya Stark\n-Tyrion Lannister\n-Jon Snow"}, {"color": "#7986ff", "font": {"color": "white"}, "id": "Maester Pycelle", "label": "Maester Pycelle", "shape": "dot", "size": 20, "title": "Maester Pycelle\n Top neighbors:\n-Eddard Stark\n-Tyrion Lannister\n-Robert Baratheon"}, {"color": "#33ccff", "font": {"color": "white"}, "id": "Osha", "label": "Osha", "shape": "dot", "size": 9, "title": "Osha\n Top neighbors:\n-Bran Stark\n-Hodor\n-Maester Luwin"}, {"color": "#936cff", "font": {"color": "white"}, "id": "Cersei Lannister", "label": "Cersei Lannister", "shape": "dot", "size": 24, "title": "Cersei Lannister\n Top neighbors:\n-Tyrion Lannister\n-Joffrey Baratheon\n-Jaime Lannister"}, {"color": "#a05fff", "font": {"color": "white"}, "id": "Tywin Lannister", "label": "Tywin Lannister", "shape": "dot", "size": 26, "title": "Tywin Lannister\n Top neighbors:\n-Tyrion Lannister\n-Robb Stark\n-Jaime Lannister"}, {"color": "#4cb3ff", "font": {"color": "white"}, "id": "Brynden Tully", "label": "Brynden Tully", "shape": "dot", "size": 13, "title": "Brynden Tully\n Top neighbors:\n-Catelyn Stark\n-Robb Stark\n-Eddard Stark"}, {"color": "#8679ff", "font": {"color": "white"}, "id": "Lord Varys", "label": "Lord Varys", "shape": "dot", "size": 22, "title": "Lord Varys\n Top neighbors:\n-Tyrion Lannister\n-Eddard Stark\n-Robert Baratheon"}, {"color": "#8c73ff", "font": {"color": "white"}, "id": "Lord Renly Baratheon", "label": "Lord Renly Baratheon", "shape": "dot", "size": 23, "title": "Lord Renly Baratheon\n Top neighbors:\n-Robert Baratheon\n-Catelyn Stark\n-Eddard Stark"}, {"color": "#4cb3ff", "font": {"color": "white"}, "id": "Septa Mordane", "label": "Septa Mordane", "shape": "dot", "size": 13, "title": "Septa Mordane\n Top neighbors:\n-Sansa Stark\n-Arya Stark\n-Eddard Stark"}, {"color": "#39c6ff", "font": {"color": "white"}, "id": "Beth Cassel", "label": "Beth Cassel", "shape": "dot", "size": 10, "title": "Beth Cassel\n Top neighbors:\n-Ser Rodrik Cassel\n-Sansa Stark\n-Arya Stark"}, {"color": "#807fff", "font": {"color": "white"}, "id": "Lord Petyr Baelish", "label": "Lord Petyr Baelish", "shape": "dot", "size": 21, "title": "Lord Petyr Baelish\n Top neighbors:\n-Sansa Stark\n-Eddard Stark\n-Tyrion Lannister"}, {"color": "#7986ff", "font": {"color": "white"}, "id": "Jon Arryn", "label": "Jon Arryn", "shape": "dot", "size": 20, "title": "Jon Arryn\n Top neighbors:\n-Eddard Stark\n-Robert Baratheon\n-Catelyn Stark"}, {"color": "#06f9ff", "font": {"color": "white"}, "id": "Lord Mormont", "label": "Lord Mormont", "shape": "dot", "size": 2, "title": "Lord Mormont\n Top neighbors:\n-Jon Snow\n-Tyrion Lannister"}, {"color": "#20dfff", "font": {"color": "white"}, "id": "Ser Vardis Egen", "label": "Ser Vardis Egen", "shape": "dot", "size": 6, "title": "Ser Vardis Egen\n Top neighbors:\n-Bronn\n-Catelyn Stark\n-Tyrion Lannister"}, {"color": "#609fff", "font": {"color": "white"}, "id": "Sandor Clegane", "label": "Sandor Clegane", "shape": "dot", "size": 16, "title": "Sandor Clegane\n Top neighbors:\n-Arya Stark\n-Tyrion Lannister\n-Sansa Stark"}, {"color": "#46b9ff", "font": {"color": "white"}, "id": "Jorah Mormont", "label": "Jorah Mormont", "shape": "dot", "size": 12, "title": "Jorah Mormont\n Top neighbors:\n-Daenerys Targaryen\n-Viserys Targaryen\n-Khal Drogo"}, {"color": "#13ecff", "font": {"color": "white"}, "id": "Mycah", "label": "Mycah", "shape": "dot", "size": 4, "title": "Mycah\n Top neighbors:\n-Arya Stark\n-Sansa Stark\n-Joffrey Baratheon"}, {"color": "#13ecff", "font": {"color": "white"}, "id": "Syrio Forel", "label": "Syrio Forel", "shape": "dot", "size": 4, "title": "Syrio Forel\n Top neighbors:\n-Arya Stark\n-Eddard Stark\n-Yoren"}, {"color": "#59a6ff", "font": {"color": "white"}, "id": "Viserys Targaryen", "label": "Viserys Targaryen", "shape": "dot", "size": 15, "title": "Viserys Targaryen\n Top neighbors:\n-Daenerys Targaryen\n-Jorah Mormont\n-Khal Drogo"}, {"color": "#59a6ff", "font": {"color": "white"}, "id": "Daenerys Targaryen", "label": "Daenerys Targaryen", "shape": "dot", "size": 15, "title": "Daenerys Targaryen\n Top neighbors:\n-Jorah Mormont\n-Viserys Targaryen\n-Khal Drogo"}, {"color": "#738cff", "font": {"color": "white"}, "id": "Bronn", "label": "Bronn", "shape": "dot", "size": 19, "title": "Bronn\n Top neighbors:\n-Tyrion Lannister\n-Ser Vardis Egen\n-Cersei Lannister"}, {"color": "#06f9ff", "font": {"color": "white"}, "id": "Moreo Tumitis", "label": "Moreo Tumitis", "shape": "dot", "size": 2, "title": "Moreo Tumitis\n Top neighbors:\n-Catelyn Stark\n-Ser Rodrik Cassel"}, {"color": "#26d9ff", "font": {"color": "white"}, "id": "Marillion", "label": "Marillion", "shape": "dot", "size": 7, "title": "Marillion\n Top neighbors:\n-Tyrion Lannister\n-Sansa Stark\n-Catelyn Stark"}, {"color": "#46b9ff", "font": {"color": "white"}, "id": "Khal Drogo", "label": "Khal Drogo", "shape": "dot", "size": 12, "title": "Khal Drogo\n Top neighbors:\n-Daenerys Targaryen\n-Jorah Mormont\n-Viserys Targaryen"}, {"color": "#2cd3ff", "font": {"color": "white"}, "id": "Magister Illyrio Mopatis", "label": "Magister Illyrio Mopatis", "shape": "dot", "size": 8, "title": "Magister Illyrio Mopatis\n Top neighbors:\n-Daenerys Targaryen\n-Viserys Targaryen\n-Khal Drogo"}, {"color": "#33ccff", "font": {"color": "white"}, "id": "Irri", "label": "Irri", "shape": "dot", "size": 9, "title": "Irri\n Top neighbors:\n-Daenerys Targaryen\n-Jhiqui\n-Jorah Mormont"}, {"color": "#2cd3ff", "font": {"color": "white"}, "id": "Mirri Maz Duur", "label": "Mirri Maz Duur", "shape": "dot", "size": 8, "title": "Mirri Maz Duur\n Top neighbors:\n-Daenerys Targaryen\n-Jorah Mormont\n-Qotho"}, {"color": "#00ffff", "font": {"color": "white"}, "id": "Alyssa Arryn", "label": "Alyssa Arryn", "shape": "dot", "size": 1, "title": "Alyssa Arryn\n Top neighbors:\n-Catelyn Stark"}, {"color": "#26d9ff", "font": {"color": "white"}, "id": "Doreah", "label": "Doreah", "shape": "dot", "size": 7, "title": "Doreah\n Top neighbors:\n-Daenerys Targaryen\n-Irri\n-Jhiqui"}, {"color": "#2cd3ff", "font": {"color": "white"}, "id": "Jhiqui", "label": "Jhiqui", "shape": "dot", "size": 8, "title": "Jhiqui\n Top neighbors:\n-Daenerys Targaryen\n-Irri\n-Jorah Mormont"}, {"color": "#13ecff", "font": {"color": "white"}, "id": "Cohollo", "label": "Cohollo", "shape": "dot", "size": 4, "title": "Cohollo\n Top neighbors:\n-Daenerys Targaryen\n-Khal Drogo\n-Haggo"}, {"color": "#20dfff", "font": {"color": "white"}, "id": "Qotho", "label": "Qotho", "shape": "dot", "size": 6, "title": "Qotho\n Top neighbors:\n-Daenerys Targaryen\n-Haggo\n-Mirri Maz Duur"}, {"color": "#19e6ff", "font": {"color": "white"}, "id": "Haggo", "label": "Haggo", "shape": "dot", "size": 5, "title": "Haggo\n Top neighbors:\n-Daenerys Targaryen\n-Qotho\n-Mirri Maz Duur"}]);
+                  edges = new vis.DataSet([{"from": "Maester Aemon", "to": "Gared", "value": 5, "width": 1}, {"from": "Maester Aemon", "to": "Jon Snow", "value": 132, "width": 1}, {"from": "Maester Aemon", "to": "Tyrion Lannister", "value": 8, "width": 1}, {"from": "Maester Aemon", "to": "Samwell Tarly", "value": 20, "width": 1}, {"from": "Maester Aemon", "to": "Grenn", "value": 14, "width": 1}, {"from": "Maester Aemon", "to": "Robert Baratheon", "value": 6, "width": 1}, {"from": "Maester Aemon", "to": "Janos Slynt", "value": 12, "width": 1}, {"from": "Robb Stark", "to": "Bran Stark", "value": 416, "width": 1}, {"from": "Robb Stark", "to": "Old Nan", "value": 20, "width": 1}, {"from": "Robb Stark", "to": "Jon Snow", "value": 189, "width": 1}, {"from": "Robb Stark", "to": "Eddard Stark", "value": 119, "width": 1}, {"from": "Robb Stark", "to": "Theon Greyjoy", "value": 157, "width": 1}, {"from": "Robb Stark", "to": "Jory Cassel", "value": 29, "width": 1}, {"from": "Robb Stark", "to": "Ser Rodrik Cassel", "value": 51, "width": 1}, {"from": "Robb Stark", "to": "Hullen", "value": 14, "width": 1}, {"from": "Robb Stark", "to": "Rickon Stark", "value": 106, "width": 1}, {"from": "Robb Stark", "to": "Arya Stark", "value": 111, "width": 1}, {"from": "Robb Stark", "to": "Sansa Stark", "value": 112, "width": 1}, {"from": "Robb Stark", "to": "Joffrey Baratheon", "value": 74, "width": 1}, {"from": "Robb Stark", "to": "Robert Baratheon", "value": 43, "width": 1}, {"from": "Robb Stark", "to": "Catelyn Stark", "value": 339, "width": 1}, {"from": "Robb Stark", "to": "Jaime Lannister", "value": 70, "width": 1}, {"from": "Robb Stark", "to": "Tyrion Lannister", "value": 67, "width": 1}, {"from": "Robb Stark", "to": "Maester Luwin", "value": 72, "width": 1}, {"from": "Robb Stark", "to": "Hodor", "value": 39, "width": 1}, {"from": "Robb Stark", "to": "Yoren", "value": 12, "width": 1}, {"from": "Robb Stark", "to": "Maester Pycelle", "value": 8, "width": 1}, {"from": "Robb Stark", "to": "Osha", "value": 19, "width": 1}, {"from": "Robb Stark", "to": "Cersei Lannister", "value": 22, "width": 1}, {"from": "Robb Stark", "to": "Tywin Lannister", "value": 82, "width": 1}, {"from": "Robb Stark", "to": "Brynden Tully", "value": 45, "width": 1}, {"from": "Robb Stark", "to": "Lord Varys", "value": 7, "width": 1}, {"from": "Robb Stark", "to": "Samwell Tarly", "value": 17, "width": 1}, {"from": "Robb Stark", "to": "Lord Renly Baratheon", "value": 54, "width": 1}, {"from": "Robb Stark", "to": "Septa Mordane", "value": 6, "width": 1}, {"from": "Robb Stark", "to": "Beth Cassel", "value": 5, "width": 1}, {"from": "Robb Stark", "to": "Lord Petyr Baelish", "value": 20, "width": 1}, {"from": "Robb Stark", "to": "Jon Arryn", "value": 5, "width": 1}, {"from": "Bran Stark", "to": "Old Nan", "value": 102, "width": 1}, {"from": "Bran Stark", "to": "Jon Snow", "value": 192, "width": 1}, {"from": "Bran Stark", "to": "Eddard Stark", "value": 96, "width": 1}, {"from": "Bran Stark", "to": "Theon Greyjoy", "value": 133, "width": 1}, {"from": "Bran Stark", "to": "Jory Cassel", "value": 36, "width": 1}, {"from": "Bran Stark", "to": "Ser Rodrik Cassel", "value": 114, "width": 1}, {"from": "Bran Stark", "to": "Robert Baratheon", "value": 39, "width": 1}, {"from": "Bran Stark", "to": "Hullen", "value": 13, "width": 1}, {"from": "Bran Stark", "to": "Rickon Stark", "value": 202, "width": 1}, {"from": "Bran Stark", "to": "Catelyn Stark", "value": 93, "width": 1}, {"from": "Bran Stark", "to": "Arya Stark", "value": 88, "width": 1}, {"from": "Bran Stark", "to": "Sansa Stark", "value": 68, "width": 1}, {"from": "Bran Stark", "to": "Joffrey Baratheon", "value": 16, "width": 1}, {"from": "Bran Stark", "to": "Jaime Lannister", "value": 11, "width": 1}, {"from": "Bran Stark", "to": "Hodor", "value": 453, "width": 1}, {"from": "Bran Stark", "to": "Maester Luwin", "value": 270, "width": 1}, {"from": "Bran Stark", "to": "Tyrion Lannister", "value": 38, "width": 1}, {"from": "Bran Stark", "to": "Jon Arryn", "value": 11, "width": 1}, {"from": "Bran Stark", "to": "Lord Varys", "value": 8, "width": 1}, {"from": "Bran Stark", "to": "Septa Mordane", "value": 10, "width": 1}, {"from": "Bran Stark", "to": "Yoren", "value": 12, "width": 1}, {"from": "Bran Stark", "to": "Maester Pycelle", "value": 5, "width": 1}, {"from": "Bran Stark", "to": "Cersei Lannister", "value": 5, "width": 1}, {"from": "Bran Stark", "to": "Tywin Lannister", "value": 8, "width": 1}, {"from": "Bran Stark", "to": "Lord Renly Baratheon", "value": 11, "width": 1}, {"from": "Bran Stark", "to": "Brynden Tully", "value": 5, "width": 1}, {"from": "Bran Stark", "to": "Osha", "value": 129, "width": 1}, {"from": "Bran Stark", "to": "Beth Cassel", "value": 10, "width": 1}, {"from": "Old Nan", "to": "Maester Luwin", "value": 27, "width": 1}, {"from": "Old Nan", "to": "Hodor", "value": 32, "width": 1}, {"from": "Old Nan", "to": "Catelyn Stark", "value": 5, "width": 1}, {"from": "Old Nan", "to": "Ser Rodrik Cassel", "value": 10, "width": 1}, {"from": "Old Nan", "to": "Arya Stark", "value": 27, "width": 1}, {"from": "Old Nan", "to": "Robert Baratheon", "value": 8, "width": 1}, {"from": "Old Nan", "to": "Jon Snow", "value": 18, "width": 1}, {"from": "Old Nan", "to": "Rickon Stark", "value": 11, "width": 1}, {"from": "Old Nan", "to": "Theon Greyjoy", "value": 11, "width": 1}, {"from": "Old Nan", "to": "Eddard Stark", "value": 6, "width": 1}, {"from": "Old Nan", "to": "Sansa Stark", "value": 7, "width": 1}, {"from": "Jon Snow", "to": "Jory Cassel", "value": 13, "width": 1}, {"from": "Jon Snow", "to": "Ser Rodrik Cassel", "value": 22, "width": 1}, {"from": "Jon Snow", "to": "Eddard Stark", "value": 134, "width": 1}, {"from": "Jon Snow", "to": "Robert Baratheon", "value": 73, "width": 1}, {"from": "Jon Snow", "to": "Theon Greyjoy", "value": 40, "width": 1}, {"from": "Jon Snow", "to": "Rickon Stark", "value": 49, "width": 1}, {"from": "Jon Snow", "to": "Maester Pycelle", "value": 8, "width": 1}, {"from": "Jon Snow", "to": "Catelyn Stark", "value": 49, "width": 1}, {"from": "Jon Snow", "to": "Tywin Lannister", "value": 8, "width": 1}, {"from": "Jon Snow", "to": "Arya Stark", "value": 138, "width": 1}, {"from": "Jon Snow", "to": "Sansa Stark", "value": 50, "width": 1}, {"from": "Jon Snow", "to": "Joffrey Baratheon", "value": 29, "width": 1}, {"from": "Jon Snow", "to": "Cersei Lannister", "value": 8, "width": 1}, {"from": "Jon Snow", "to": "Jaime Lannister", "value": 11, "width": 1}, {"from": "Jon Snow", "to": "Tyrion Lannister", "value": 87, "width": 1}, {"from": "Jon Snow", "to": "Hullen", "value": 7, "width": 1}, {"from": "Jon Snow", "to": "Maester Luwin", "value": 31, "width": 1}, {"from": "Jon Snow", "to": "Septa Mordane", "value": 17, "width": 1}, {"from": "Jon Snow", "to": "Jon Arryn", "value": 11, "width": 1}, {"from": "Jon Snow", "to": "Yoren", "value": 17, "width": 1}, {"from": "Jon Snow", "to": "Grenn", "value": 176, "width": 1}, {"from": "Jon Snow", "to": "Lord Varys", "value": 5, "width": 1}, {"from": "Jon Snow", "to": "Lord Mormont", "value": 45, "width": 1}, {"from": "Jon Snow", "to": "Hodor", "value": 6, "width": 1}, {"from": "Jon Snow", "to": "Lord Renly Baratheon", "value": 25, "width": 1}, {"from": "Jon Snow", "to": "Samwell Tarly", "value": 114, "width": 1}, {"from": "Jon Snow", "to": "Lord Petyr Baelish", "value": 7, "width": 1}, {"from": "Jon Snow", "to": "Ser Vardis Egen", "value": 5, "width": 1}, {"from": "Jon Snow", "to": "Janos Slynt", "value": 41, "width": 1}, {"from": "Eddard Stark", "to": "Theon Greyjoy", "value": 65, "width": 1}, {"from": "Eddard Stark", "to": "Jory Cassel", "value": 85, "width": 1}, {"from": "Eddard Stark", "to": "Ser Rodrik Cassel", "value": 41, "width": 1}, {"from": "Eddard Stark", "to": "Robert Baratheon", "value": 517, "width": 1}, {"from": "Eddard Stark", "to": "Catelyn Stark", "value": 225, "width": 1}, {"from": "Eddard Stark", "to": "Arya Stark", "value": 153, "width": 1}, {"from": "Eddard Stark", "to": "Sansa Stark", "value": 112, "width": 1}, {"from": "Eddard Stark", "to": "Rickon Stark", "value": 28, "width": 1}, {"from": "Eddard Stark", "to": "Jon Arryn", "value": 72, "width": 1}, {"from": "Eddard Stark", "to": "Brynden Tully", "value": 15, "width": 1}, {"from": "Eddard Stark", "to": "Maester Luwin", "value": 37, "width": 1}, {"from": "Eddard Stark", "to": "Cersei Lannister", "value": 107, "width": 1}, {"from": "Eddard Stark", "to": "Jaime Lannister", "value": 97, "width": 1}, {"from": "Eddard Stark", "to": "Sandor Clegane", "value": 42, "width": 1}, {"from": "Eddard Stark", "to": "Tyrion Lannister", "value": 62, "width": 1}, {"from": "Eddard Stark", "to": "Tywin Lannister", "value": 65, "width": 1}, {"from": "Eddard Stark", "to": "Joffrey Baratheon", "value": 89, "width": 1}, {"from": "Eddard Stark", "to": "Lord Renly Baratheon", "value": 112, "width": 1}, {"from": "Eddard Stark", "to": "Lord Varys", "value": 129, "width": 1}, {"from": "Eddard Stark", "to": "Jorah Mormont", "value": 14, "width": 1}, {"from": "Eddard Stark", "to": "Yoren", "value": 6, "width": 1}, {"from": "Eddard Stark", "to": "Hodor", "value": 11, "width": 1}, {"from": "Eddard Stark", "to": "Septa Mordane", "value": 21, "width": 1}, {"from": "Eddard Stark", "to": "Mycah", "value": 5, "width": 1}, {"from": "Eddard Stark", "to": "Maester Pycelle", "value": 95, "width": 1}, {"from": "Eddard Stark", "to": "Lord Petyr Baelish", "value": 55, "width": 1}, {"from": "Eddard Stark", "to": "Syrio Forel", "value": 11, "width": 1}, {"from": "Eddard Stark", "to": "Janos Slynt", "value": 23, "width": 1}, {"from": "Eddard Stark", "to": "Viserys Targaryen", "value": 6, "width": 1}, {"from": "Eddard Stark", "to": "Daenerys Targaryen", "value": 12, "width": 1}, {"from": "Eddard Stark", "to": "Osha", "value": 9, "width": 1}, {"from": "Eddard Stark", "to": "Bronn", "value": 9, "width": 1}, {"from": "Theon Greyjoy", "to": "Jory Cassel", "value": 6, "width": 1}, {"from": "Theon Greyjoy", "to": "Ser Rodrik Cassel", "value": 55, "width": 1}, {"from": "Theon Greyjoy", "to": "Robert Baratheon", "value": 25, "width": 1}, {"from": "Theon Greyjoy", "to": "Arya Stark", "value": 10, "width": 1}, {"from": "Theon Greyjoy", "to": "Joffrey Baratheon", "value": 7, "width": 1}, {"from": "Theon Greyjoy", "to": "Rickon Stark", "value": 33, "width": 1}, {"from": "Theon Greyjoy", "to": "Catelyn Stark", "value": 46, "width": 1}, {"from": "Theon Greyjoy", "to": "Maester Luwin", "value": 52, "width": 1}, {"from": "Theon Greyjoy", "to": "Hodor", "value": 18, "width": 1}, {"from": "Theon Greyjoy", "to": "Tyrion Lannister", "value": 5, "width": 1}, {"from": "Theon Greyjoy", "to": "Osha", "value": 9, "width": 1}, {"from": "Theon Greyjoy", "to": "Brynden Tully", "value": 13, "width": 1}, {"from": "Theon Greyjoy", "to": "Tywin Lannister", "value": 16, "width": 1}, {"from": "Theon Greyjoy", "to": "Jaime Lannister", "value": 7, "width": 1}, {"from": "Theon Greyjoy", "to": "Sansa Stark", "value": 8, "width": 1}, {"from": "Theon Greyjoy", "to": "Beth Cassel", "value": 6, "width": 1}, {"from": "Jory Cassel", "to": "Robert Baratheon", "value": 18, "width": 1}, {"from": "Jory Cassel", "to": "Ser Rodrik Cassel", "value": 24, "width": 1}, {"from": "Jory Cassel", "to": "Hullen", "value": 9, "width": 1}, {"from": "Jory Cassel", "to": "Joffrey Baratheon", "value": 6, "width": 1}, {"from": "Jory Cassel", "to": "Arya Stark", "value": 43, "width": 1}, {"from": "Jory Cassel", "to": "Sansa Stark", "value": 24, "width": 1}, {"from": "Jory Cassel", "to": "Septa Mordane", "value": 8, "width": 1}, {"from": "Jory Cassel", "to": "Catelyn Stark", "value": 6, "width": 1}, {"from": "Jory Cassel", "to": "Lord Renly Baratheon", "value": 8, "width": 1}, {"from": "Ser Rodrik Cassel", "to": "Robert Baratheon", "value": 9, "width": 1}, {"from": "Ser Rodrik Cassel", "to": "Joffrey Baratheon", "value": 12, "width": 1}, {"from": "Ser Rodrik Cassel", "to": "Sansa Stark", "value": 7, "width": 1}, {"from": "Ser Rodrik Cassel", "to": "Arya Stark", "value": 17, "width": 1}, {"from": "Ser Rodrik Cassel", "to": "Beth Cassel", "value": 15, "width": 1}, {"from": "Ser Rodrik Cassel", "to": "Rickon Stark", "value": 17, "width": 1}, {"from": "Ser Rodrik Cassel", "to": "Catelyn Stark", "value": 78, "width": 1}, {"from": "Ser Rodrik Cassel", "to": "Maester Luwin", "value": 53, "width": 1}, {"from": "Ser Rodrik Cassel", "to": "Cersei Lannister", "value": 5, "width": 1}, {"from": "Ser Rodrik Cassel", "to": "Moreo Tumitis", "value": 8, "width": 1}, {"from": "Ser Rodrik Cassel", "to": "Lord Petyr Baelish", "value": 5, "width": 1}, {"from": "Ser Rodrik Cassel", "to": "Hullen", "value": 5, "width": 1}, {"from": "Ser Rodrik Cassel", "to": "Marillion", "value": 14, "width": 1}, {"from": "Ser Rodrik Cassel", "to": "Tyrion Lannister", "value": 34, "width": 1}, {"from": "Ser Rodrik Cassel", "to": "Tywin Lannister", "value": 5, "width": 1}, {"from": "Ser Rodrik Cassel", "to": "Jaime Lannister", "value": 5, "width": 1}, {"from": "Ser Rodrik Cassel", "to": "Bronn", "value": 12, "width": 1}, {"from": "Ser Rodrik Cassel", "to": "Hodor", "value": 17, "width": 1}, {"from": "Ser Rodrik Cassel", "to": "Osha", "value": 5, "width": 1}, {"from": "Robert Baratheon", "to": "Jon Arryn", "value": 49, "width": 1}, {"from": "Robert Baratheon", "to": "Maester Pycelle", "value": 58, "width": 1}, {"from": "Robert Baratheon", "to": "Catelyn Stark", "value": 72, "width": 1}, {"from": "Robert Baratheon", "to": "Cersei Lannister", "value": 137, "width": 1}, {"from": "Robert Baratheon", "to": "Jaime Lannister", "value": 97, "width": 1}, {"from": "Robert Baratheon", "to": "Sansa Stark", "value": 100, "width": 1}, {"from": "Robert Baratheon", "to": "Lord Renly Baratheon", "value": 160, "width": 1}, {"from": "Robert Baratheon", "to": "Tyrion Lannister", "value": 108, "width": 1}, {"from": "Robert Baratheon", "to": "Lord Varys", "value": 70, "width": 1}, {"from": "Robert Baratheon", "to": "Jorah Mormont", "value": 16, "width": 1}, {"from": "Robert Baratheon", "to": "Daenerys Targaryen", "value": 31, "width": 1}, {"from": "Robert Baratheon", "to": "Tywin Lannister", "value": 70, "width": 1}, {"from": "Robert Baratheon", "to": "Khal Drogo", "value": 8, "width": 1}, {"from": "Robert Baratheon", "to": "Arya Stark", "value": 54, "width": 1}, {"from": "Robert Baratheon", "to": "Septa Mordane", "value": 12, "width": 1}, {"from": "Robert Baratheon", "to": "Joffrey Baratheon", "value": 93, "width": 1}, {"from": "Robert Baratheon", "to": "Sandor Clegane", "value": 22, "width": 1}, {"from": "Robert Baratheon", "to": "Hodor", "value": 9, "width": 1}, {"from": "Robert Baratheon", "to": "Lord Petyr Baelish", "value": 28, "width": 1}, {"from": "Robert Baratheon", "to": "Viserys Targaryen", "value": 25, "width": 1}, {"from": "Robert Baratheon", "to": "Bronn", "value": 8, "width": 1}, {"from": "Robert Baratheon", "to": "Marillion", "value": 12, "width": 1}, {"from": "Robert Baratheon", "to": "Brynden Tully", "value": 12, "width": 1}, {"from": "Robert Baratheon", "to": "Ser Vardis Egen", "value": 9, "width": 1}, {"from": "Robert Baratheon", "to": "Magister Illyrio Mopatis", "value": 6, "width": 1}, {"from": "Robert Baratheon", "to": "Janos Slynt", "value": 11, "width": 1}, {"from": "Robert Baratheon", "to": "Osha", "value": 10, "width": 1}, {"from": "Robert Baratheon", "to": "Maester Luwin", "value": 6, "width": 1}, {"from": "Robert Baratheon", "to": "Rickon Stark", "value": 12, "width": 1}, {"from": "Robert Baratheon", "to": "Samwell Tarly", "value": 15, "width": 1}, {"from": "Robert Baratheon", "to": "Irri", "value": 5, "width": 1}, {"from": "Robert Baratheon", "to": "Mirri Maz Duur", "value": 5, "width": 1}, {"from": "Hullen", "to": "Arya Stark", "value": 12, "width": 1}, {"from": "Rickon Stark", "to": "Arya Stark", "value": 45, "width": 1}, {"from": "Rickon Stark", "to": "Sansa Stark", "value": 41, "width": 1}, {"from": "Rickon Stark", "to": "Maester Luwin", "value": 42, "width": 1}, {"from": "Rickon Stark", "to": "Catelyn Stark", "value": 41, "width": 1}, {"from": "Rickon Stark", "to": "Tyrion Lannister", "value": 9, "width": 1}, {"from": "Rickon Stark", "to": "Osha", "value": 28, "width": 1}, {"from": "Rickon Stark", "to": "Hodor", "value": 34, "width": 1}, {"from": "Rickon Stark", "to": "Beth Cassel", "value": 5, "width": 1}, {"from": "Rickon Stark", "to": "Joffrey Baratheon", "value": 6, "width": 1}, {"from": "Rickon Stark", "to": "Tywin Lannister", "value": 5, "width": 1}, {"from": "Catelyn Stark", "to": "Maester Luwin", "value": 42, "width": 1}, {"from": "Catelyn Stark", "to": "Brynden Tully", "value": 73, "width": 1}, {"from": "Catelyn Stark", "to": "Cersei Lannister", "value": 48, "width": 1}, {"from": "Catelyn Stark", "to": "Tywin Lannister", "value": 63, "width": 1}, {"from": "Catelyn Stark", "to": "Sansa Stark", "value": 62, "width": 1}, {"from": "Catelyn Stark", "to": "Joffrey Baratheon", "value": 29, "width": 1}, {"from": "Catelyn Stark", "to": "Arya Stark", "value": 42, "width": 1}, {"from": "Catelyn Stark", "to": "Jon Arryn", "value": 26, "width": 1}, {"from": "Catelyn Stark", "to": "Hodor", "value": 6, "width": 1}, {"from": "Catelyn Stark", "to": "Jaime Lannister", "value": 77, "width": 1}, {"from": "Catelyn Stark", "to": "Moreo Tumitis", "value": 10, "width": 1}, {"from": "Catelyn Stark", "to": "Lord Petyr Baelish", "value": 41, "width": 1}, {"from": "Catelyn Stark", "to": "Lord Varys", "value": 19, "width": 1}, {"from": "Catelyn Stark", "to": "Maester Pycelle", "value": 9, "width": 1}, {"from": "Catelyn Stark", "to": "Tyrion Lannister", "value": 109, "width": 1}, {"from": "Catelyn Stark", "to": "Marillion", "value": 18, "width": 1}, {"from": "Catelyn Stark", "to": "Bronn", "value": 27, "width": 1}, {"from": "Catelyn Stark", "to": "Alyssa Arryn", "value": 15, "width": 1}, {"from": "Catelyn Stark", "to": "Ser Vardis Egen", "value": 22, "width": 1}, {"from": "Catelyn Stark", "to": "Sandor Clegane", "value": 15, "width": 1}, {"from": "Catelyn Stark", "to": "Lord Renly Baratheon", "value": 126, "width": 1}, {"from": "Catelyn Stark", "to": "Beth Cassel", "value": 5, "width": 1}, {"from": "Catelyn Stark", "to": "Samwell Tarly", "value": 12, "width": 1}, {"from": "Arya Stark", "to": "Sansa Stark", "value": 365, "width": 1}, {"from": "Arya Stark", "to": "Joffrey Baratheon", "value": 134, "width": 1}, {"from": "Arya Stark", "to": "Septa Mordane", "value": 111, "width": 1}, {"from": "Arya Stark", "to": "Beth Cassel", "value": 10, "width": 1}, {"from": "Arya Stark", "to": "Sandor Clegane", "value": 91, "width": 1}, {"from": "Arya Stark", "to": "Mycah", "value": 43, "width": 1}, {"from": "Arya Stark", "to": "Cersei Lannister", "value": 25, "width": 1}, {"from": "Arya Stark", "to": "Lord Renly Baratheon", "value": 12, "width": 1}, {"from": "Arya Stark", "to": "Lord Petyr Baelish", "value": 5, "width": 1}, {"from": "Arya Stark", "to": "Lord Varys", "value": 16, "width": 1}, {"from": "Arya Stark", "to": "Syrio Forel", "value": 81, "width": 1}, {"from": "Arya Stark", "to": "Maester Pycelle", "value": 8, "width": 1}, {"from": "Arya Stark", "to": "Tywin Lannister", "value": 57, "width": 1}, {"from": "Arya Stark", "to": "Yoren", "value": 98, "width": 1}, {"from": "Arya Stark", "to": "Jaime Lannister", "value": 20, "width": 1}, {"from": "Arya Stark", "to": "Hodor", "value": 6, "width": 1}, {"from": "Arya Stark", "to": "Tyrion Lannister", "value": 14, "width": 1}, {"from": "Arya Stark", "to": "Maester Luwin", "value": 9, "width": 1}, {"from": "Arya Stark", "to": "Brynden Tully", "value": 5, "width": 1}, {"from": "Sansa Stark", "to": "Joffrey Baratheon", "value": 416, "width": 1}, {"from": "Sansa Stark", "to": "Cersei Lannister", "value": 133, "width": 1}, {"from": "Sansa Stark", "to": "Jaime Lannister", "value": 47, "width": 1}, {"from": "Sansa Stark", "to": "Septa Mordane", "value": 123, "width": 1}, {"from": "Sansa Stark", "to": "Beth Cassel", "value": 11, "width": 1}, {"from": "Sansa Stark", "to": "Mycah", "value": 19, "width": 1}, {"from": "Sansa Stark", "to": "Sandor Clegane", "value": 50, "width": 1}, {"from": "Sansa Stark", "to": "Lord Renly Baratheon", "value": 36, "width": 1}, {"from": "Sansa Stark", "to": "Syrio Forel", "value": 6, "width": 1}, {"from": "Sansa Stark", "to": "Lord Petyr Baelish", "value": 84, "width": 1}, {"from": "Sansa Stark", "to": "Yoren", "value": 5, "width": 1}, {"from": "Sansa Stark", "to": "Hodor", "value": 8, "width": 1}, {"from": "Sansa Stark", "to": "Jon Arryn", "value": 8, "width": 1}, {"from": "Sansa Stark", "to": "Lord Varys", "value": 43, "width": 1}, {"from": "Sansa Stark", "to": "Maester Pycelle", "value": 28, "width": 1}, {"from": "Sansa Stark", "to": "Tyrion Lannister", "value": 191, "width": 1}, {"from": "Sansa Stark", "to": "Tywin Lannister", "value": 30, "width": 1}, {"from": "Sansa Stark", "to": "Janos Slynt", "value": 20, "width": 1}, {"from": "Sansa Stark", "to": "Viserys Targaryen", "value": 5, "width": 1}, {"from": "Sansa Stark", "to": "Bronn", "value": 10, "width": 1}, {"from": "Sansa Stark", "to": "Marillion", "value": 21, "width": 1}, {"from": "Maester Luwin", "to": "Yoren", "value": 5, "width": 1}, {"from": "Maester Luwin", "to": "Tyrion Lannister", "value": 5, "width": 1}, {"from": "Maester Luwin", "to": "Hodor", "value": 59, "width": 1}, {"from": "Maester Luwin", "to": "Osha", "value": 39, "width": 1}, {"from": "Maester Luwin", "to": "Beth Cassel", "value": 6, "width": 1}, {"from": "Jon Arryn", "to": "Maester Pycelle", "value": 8, "width": 1}, {"from": "Jon Arryn", "to": "Lord Renly Baratheon", "value": 12, "width": 1}, {"from": "Jon Arryn", "to": "Lord Petyr Baelish", "value": 16, "width": 1}, {"from": "Jon Arryn", "to": "Viserys Targaryen", "value": 5, "width": 1}, {"from": "Jon Arryn", "to": "Cersei Lannister", "value": 10, "width": 1}, {"from": "Jon Arryn", "to": "Tywin Lannister", "value": 8, "width": 1}, {"from": "Jon Arryn", "to": "Tyrion Lannister", "value": 13, "width": 1}, {"from": "Jon Arryn", "to": "Lord Varys", "value": 5, "width": 1}, {"from": "Jon Arryn", "to": "Brynden Tully", "value": 7, "width": 1}, {"from": "Jon Arryn", "to": "Ser Vardis Egen", "value": 5, "width": 1}, {"from": "Jon Arryn", "to": "Jaime Lannister", "value": 9, "width": 1}, {"from": "Jon Arryn", "to": "Bronn", "value": 5, "width": 1}, {"from": "Jon Arryn", "to": "Joffrey Baratheon", "value": 5, "width": 1}, {"from": "Maester Pycelle", "to": "Lord Varys", "value": 56, "width": 1}, {"from": "Maester Pycelle", "to": "Lord Renly Baratheon", "value": 18, "width": 1}, {"from": "Maester Pycelle", "to": "Lord Petyr Baelish", "value": 11, "width": 1}, {"from": "Maester Pycelle", "to": "Joffrey Baratheon", "value": 31, "width": 1}, {"from": "Maester Pycelle", "to": "Tywin Lannister", "value": 26, "width": 1}, {"from": "Maester Pycelle", "to": "Jaime Lannister", "value": 9, "width": 1}, {"from": "Maester Pycelle", "to": "Sandor Clegane", "value": 5, "width": 1}, {"from": "Maester Pycelle", "to": "Cersei Lannister", "value": 41, "width": 1}, {"from": "Maester Pycelle", "to": "Tyrion Lannister", "value": 91, "width": 1}, {"from": "Maester Pycelle", "to": "Janos Slynt", "value": 15, "width": 1}, {"from": "Maester Pycelle", "to": "Bronn", "value": 5, "width": 1}, {"from": "Brynden Tully", "to": "Tyrion Lannister", "value": 10, "width": 1}, {"from": "Brynden Tully", "to": "Lord Petyr Baelish", "value": 5, "width": 1}, {"from": "Brynden Tully", "to": "Jaime Lannister", "value": 10, "width": 1}, {"from": "Brynden Tully", "to": "Tywin Lannister", "value": 14, "width": 1}, {"from": "Brynden Tully", "to": "Lord Renly Baratheon", "value": 7, "width": 1}, {"from": "Cersei Lannister", "to": "Joffrey Baratheon", "value": 160, "width": 1}, {"from": "Cersei Lannister", "to": "Jaime Lannister", "value": 155, "width": 1}, {"from": "Cersei Lannister", "to": "Tyrion Lannister", "value": 308, "width": 1}, {"from": "Cersei Lannister", "to": "Tywin Lannister", "value": 74, "width": 1}, {"from": "Cersei Lannister", "to": "Lord Renly Baratheon", "value": 41, "width": 1}, {"from": "Cersei Lannister", "to": "Sandor Clegane", "value": 24, "width": 1}, {"from": "Cersei Lannister", "to": "Viserys Targaryen", "value": 5, "width": 1}, {"from": "Cersei Lannister", "to": "Septa Mordane", "value": 5, "width": 1}, {"from": "Cersei Lannister", "to": "Lord Varys", "value": 58, "width": 1}, {"from": "Cersei Lannister", "to": "Janos Slynt", "value": 18, "width": 1}, {"from": "Cersei Lannister", "to": "Lord Petyr Baelish", "value": 8, "width": 1}, {"from": "Cersei Lannister", "to": "Bronn", "value": 40, "width": 1}, {"from": "Cersei Lannister", "to": "Samwell Tarly", "value": 5, "width": 1}, {"from": "Magister Illyrio Mopatis", "to": "Viserys Targaryen", "value": 25, "width": 1}, {"from": "Magister Illyrio Mopatis", "to": "Daenerys Targaryen", "value": 52, "width": 1}, {"from": "Magister Illyrio Mopatis", "to": "Khal Drogo", "value": 15, "width": 1}, {"from": "Magister Illyrio Mopatis", "to": "Jorah Mormont", "value": 14, "width": 1}, {"from": "Magister Illyrio Mopatis", "to": "Irri", "value": 6, "width": 1}, {"from": "Magister Illyrio Mopatis", "to": "Doreah", "value": 5, "width": 1}, {"from": "Magister Illyrio Mopatis", "to": "Jhiqui", "value": 5, "width": 1}, {"from": "Viserys Targaryen", "to": "Daenerys Targaryen", "value": 152, "width": 1}, {"from": "Viserys Targaryen", "to": "Khal Drogo", "value": 31, "width": 1}, {"from": "Viserys Targaryen", "to": "Jorah Mormont", "value": 59, "width": 1}, {"from": "Viserys Targaryen", "to": "Doreah", "value": 10, "width": 1}, {"from": "Viserys Targaryen", "to": "Irri", "value": 11, "width": 1}, {"from": "Viserys Targaryen", "to": "Jhiqui", "value": 7, "width": 1}, {"from": "Viserys Targaryen", "to": "Tywin Lannister", "value": 5, "width": 1}, {"from": "Viserys Targaryen", "to": "Jaime Lannister", "value": 9, "width": 1}, {"from": "Viserys Targaryen", "to": "Tyrion Lannister", "value": 6, "width": 1}, {"from": "Daenerys Targaryen", "to": "Khal Drogo", "value": 147, "width": 1}, {"from": "Daenerys Targaryen", "to": "Jorah Mormont", "value": 355, "width": 1}, {"from": "Daenerys Targaryen", "to": "Doreah", "value": 59, "width": 1}, {"from": "Daenerys Targaryen", "to": "Irri", "value": 132, "width": 1}, {"from": "Daenerys Targaryen", "to": "Jhiqui", "value": 119, "width": 1}, {"from": "Daenerys Targaryen", "to": "Lord Varys", "value": 10, "width": 1}, {"from": "Daenerys Targaryen", "to": "Cohollo", "value": 20, "width": 1}, {"from": "Daenerys Targaryen", "to": "Qotho", "value": 45, "width": 1}, {"from": "Daenerys Targaryen", "to": "Haggo", "value": 27, "width": 1}, {"from": "Daenerys Targaryen", "to": "Mirri Maz Duur", "value": 87, "width": 1}, {"from": "Daenerys Targaryen", "to": "Joffrey Baratheon", "value": 6, "width": 1}, {"from": "Khal Drogo", "to": "Qotho", "value": 9, "width": 1}, {"from": "Khal Drogo", "to": "Haggo", "value": 8, "width": 1}, {"from": "Khal Drogo", "to": "Cohollo", "value": 11, "width": 1}, {"from": "Khal Drogo", "to": "Jorah Mormont", "value": 44, "width": 1}, {"from": "Khal Drogo", "to": "Doreah", "value": 8, "width": 1}, {"from": "Khal Drogo", "to": "Jhiqui", "value": 6, "width": 1}, {"from": "Khal Drogo", "to": "Irri", "value": 8, "width": 1}, {"from": "Khal Drogo", "to": "Mirri Maz Duur", "value": 16, "width": 1}, {"from": "Jorah Mormont", "to": "Doreah", "value": 10, "width": 1}, {"from": "Jorah Mormont", "to": "Irri", "value": 33, "width": 1}, {"from": "Jorah Mormont", "to": "Jhiqui", "value": 25, "width": 1}, {"from": "Jorah Mormont", "to": "Qotho", "value": 18, "width": 1}, {"from": "Jorah Mormont", "to": "Lord Varys", "value": 7, "width": 1}, {"from": "Jorah Mormont", "to": "Mirri Maz Duur", "value": 20, "width": 1}, {"from": "Jaime Lannister", "to": "Tyrion Lannister", "value": 210, "width": 1}, {"from": "Jaime Lannister", "to": "Sandor Clegane", "value": 37, "width": 1}, {"from": "Jaime Lannister", "to": "Joffrey Baratheon", "value": 74, "width": 1}, {"from": "Jaime Lannister", "to": "Tywin Lannister", "value": 80, "width": 1}, {"from": "Jaime Lannister", "to": "Lord Renly Baratheon", "value": 48, "width": 1}, {"from": "Jaime Lannister", "to": "Lord Petyr Baelish", "value": 17, "width": 1}, {"from": "Jaime Lannister", "to": "Bronn", "value": 10, "width": 1}, {"from": "Jaime Lannister", "to": "Lord Varys", "value": 22, "width": 1}, {"from": "Jaime Lannister", "to": "Janos Slynt", "value": 5, "width": 1}, {"from": "Sandor Clegane", "to": "Tyrion Lannister", "value": 57, "width": 1}, {"from": "Sandor Clegane", "to": "Joffrey Baratheon", "value": 49, "width": 1}, {"from": "Sandor Clegane", "to": "Lord Renly Baratheon", "value": 7, "width": 1}, {"from": "Sandor Clegane", "to": "Septa Mordane", "value": 7, "width": 1}, {"from": "Sandor Clegane", "to": "Lord Varys", "value": 11, "width": 1}, {"from": "Sandor Clegane", "to": "Tywin Lannister", "value": 20, "width": 1}, {"from": "Sandor Clegane", "to": "Janos Slynt", "value": 5, "width": 1}, {"from": "Sandor Clegane", "to": "Bronn", "value": 9, "width": 1}, {"from": "Tyrion Lannister", "to": "Tywin Lannister", "value": 227, "width": 1}, {"from": "Tyrion Lannister", "to": "Joffrey Baratheon", "value": 252, "width": 1}, {"from": "Tyrion Lannister", "to": "Yoren", "value": 31, "width": 1}, {"from": "Tyrion Lannister", "to": "Lord Varys", "value": 167, "width": 1}, {"from": "Tyrion Lannister", "to": "Lord Mormont", "value": 15, "width": 1}, {"from": "Tyrion Lannister", "to": "Samwell Tarly", "value": 12, "width": 1}, {"from": "Tyrion Lannister", "to": "Bronn", "value": 297, "width": 1}, {"from": "Tyrion Lannister", "to": "Marillion", "value": 28, "width": 1}, {"from": "Tyrion Lannister", "to": "Lord Petyr Baelish", "value": 50, "width": 1}, {"from": "Tyrion Lannister", "to": "Ser Vardis Egen", "value": 19, "width": 1}, {"from": "Tyrion Lannister", "to": "Lord Renly Baratheon", "value": 61, "width": 1}, {"from": "Tyrion Lannister", "to": "Janos Slynt", "value": 77, "width": 1}, {"from": "Tywin Lannister", "to": "Joffrey Baratheon", "value": 60, "width": 1}, {"from": "Tywin Lannister", "to": "Bronn", "value": 18, "width": 1}, {"from": "Tywin Lannister", "to": "Lord Renly Baratheon", "value": 35, "width": 1}, {"from": "Tywin Lannister", "to": "Lord Petyr Baelish", "value": 9, "width": 1}, {"from": "Tywin Lannister", "to": "Lord Varys", "value": 26, "width": 1}, {"from": "Tywin Lannister", "to": "Janos Slynt", "value": 5, "width": 1}, {"from": "Tywin Lannister", "to": "Samwell Tarly", "value": 10, "width": 1}, {"from": "Joffrey Baratheon", "to": "Lord Renly Baratheon", "value": 66, "width": 1}, {"from": "Joffrey Baratheon", "to": "Mycah", "value": 18, "width": 1}, {"from": "Joffrey Baratheon", "to": "Lord Petyr Baelish", "value": 23, "width": 1}, {"from": "Joffrey Baratheon", "to": "Lord Varys", "value": 65, "width": 1}, {"from": "Joffrey Baratheon", "to": "Septa Mordane", "value": 21, "width": 1}, {"from": "Joffrey Baratheon", "to": "Janos Slynt", "value": 29, "width": 1}, {"from": "Joffrey Baratheon", "to": "Yoren", "value": 5, "width": 1}, {"from": "Joffrey Baratheon", "to": "Bronn", "value": 28, "width": 1}, {"from": "Joffrey Baratheon", "to": "Samwell Tarly", "value": 5, "width": 1}, {"from": "Septa Mordane", "to": "Lord Renly Baratheon", "value": 6, "width": 1}, {"from": "Septa Mordane", "to": "Lord Petyr Baelish", "value": 7, "width": 1}, {"from": "Beth Cassel", "to": "Hodor", "value": 6, "width": 1}, {"from": "Hodor", "to": "Osha", "value": 48, "width": 1}, {"from": "Lord Renly Baratheon", "to": "Lord Varys", "value": 49, "width": 1}, {"from": "Lord Renly Baratheon", "to": "Janos Slynt", "value": 14, "width": 1}, {"from": "Lord Renly Baratheon", "to": "Bronn", "value": 8, "width": 1}, {"from": "Lord Renly Baratheon", "to": "Samwell Tarly", "value": 27, "width": 1}, {"from": "Doreah", "to": "Irri", "value": 26, "width": 1}, {"from": "Doreah", "to": "Jhiqui", "value": 23, "width": 1}, {"from": "Irri", "to": "Jhiqui", "value": 56, "width": 1}, {"from": "Irri", "to": "Mirri Maz Duur", "value": 6, "width": 1}, {"from": "Jhiqui", "to": "Mirri Maz Duur", "value": 5, "width": 1}, {"from": "Qotho", "to": "Haggo", "value": 21, "width": 1}, {"from": "Qotho", "to": "Cohollo", "value": 8, "width": 1}, {"from": "Qotho", "to": "Mirri Maz Duur", "value": 19, "width": 1}, {"from": "Haggo", "to": "Cohollo", "value": 9, "width": 1}, {"from": "Haggo", "to": "Mirri Maz Duur", "value": 10, "width": 1}, {"from": "Lord Varys", "to": "Lord Petyr Baelish", "value": 25, "width": 1}, {"from": "Lord Varys", "to": "Janos Slynt", "value": 21, "width": 1}, {"from": "Lord Varys", "to": "Bronn", "value": 27, "width": 1}, {"from": "Yoren", "to": "Syrio Forel", "value": 7, "width": 1}, {"from": "Lord Petyr Baelish", "to": "Bronn", "value": 5, "width": 1}, {"from": "Lord Petyr Baelish", "to": "Janos Slynt", "value": 8, "width": 1}, {"from": "Lord Petyr Baelish", "to": "Marillion", "value": 6, "width": 1}, {"from": "Grenn", "to": "Samwell Tarly", "value": 14, "width": 1}, {"from": "Janos Slynt", "to": "Bronn", "value": 5, "width": 1}, {"from": "Marillion", "to": "Bronn", "value": 8, "width": 1}, {"from": "Bronn", "to": "Ser Vardis Egen", "value": 50, "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "forceAtlas2Based": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.01,
+            "damping": 0.4,
+            "gravitationalConstant": -50,
+            "springConstant": 0.08,
+            "springLength": 100
+        },
+        "solver": "forceAtlas2Based",
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
